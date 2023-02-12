@@ -127,6 +127,64 @@ def recreate():
 	regs[0] = stack.pop()
 	return
 
+def recreate_opt():
+	# Seems to start at pc 5489 -> 6027, regs: [4, 1, 3, 10, 101, 0, 0, ?]
+	r8 = 1
+	regs = [4, 1, 3, 10, 101, 0, 0, r8]
+	stack = []	# Should it start with more stuff?
+	call6027(regs, stack)
+	# The rest of this was probably not needed... Good way to waste hungover time
+	regs[1] = (regs[0] + 6) % INTWRAP
+	if regs[1] == 0:
+		# Jump 5579
+		stack.push(regs[0])
+		stack.push(regs[1])
+		stack.push(regs[2])
+		regs[0] = 29400
+		regs[1] = 1531
+		regs[2] = (10724 + 11534) % INTWRAP
+		call1458(regs, stack)
+		regs[2] = stack.pop()
+		regs[1] = stack.pop()
+		regs[0] = stack.pop()
+	else:
+		stack.push(regs[0])
+		stack.push(regs[1])
+		stack.push(regs[2])
+		regs[0] = 29014
+		regs[1] = 1531
+		regs[2] = (13005 + 4527) % INTWRAP
+		call1458(regs, stack)
+		regs[2] = stack.pop()
+		regs[1] = stack.pop()
+		regs[0] = stack.pop()
+		regs[0] = regs[7]
+		regs[1] = 25866
+		regs[2] = 32767
+		stack.push(regs[3])
+		regs[3] = 29241
+		call1841(regs, stack)
+		regs[2] = stack.pop()
+		stack.push(regs[0])
+		stack.push(regs[1])
+		stack.push(regs[2])
+		regs[0] = 29245
+		regs[1] = 1531
+		regs[2] = (14852 + 11374) % INTWRAP
+		call1458(regs, stack)
+		regs[2] = stack.pop()
+		regs[1] = stack.pop()
+		regs[0] = stack.pop()
+		memory[2732] = 2498
+		memory[2733] = 0
+		regs[1] = 2710
+		memory[2710] = 32767
+	# Jump 5714
+	regs[2] = stack.pop()
+	regs[1] = stack.pop()
+	regs[0] = stack.pop()
+	return
+
 def call1841(regs, stack):
 	stack.push(regs[3])
 	stack.push(regs[4])
@@ -223,6 +281,10 @@ def call6027(regs, stack):
 			stack.append(regs[0]) # Should we go back to where it was called from?
 			regs[1] = regs[1] - 1
 			call6027()
+			regs[1] = regs[0]
+			regs[0] = stack.pop()
+			regs[0] = regs[0] - 1
+			call6027(regs, stack)
 			return
 		else:
 			regs[0] = regs[0] - 1
