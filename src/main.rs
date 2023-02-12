@@ -1,17 +1,30 @@
 mod interpreter;
+mod static_disassembler;
 
 use std::fs;
 use std::io::BufReader;
 
 use byteorder::{LittleEndian, ReadBytesExt};
+use clap::Parser;
 
 use interpreter::interpret;
 
-fn main() {
-    let code = parse("challenge.bin");
+#[derive(Parser, Debug)]
+struct Args {
+    #[arg(short, default_value_t = false)]
+    disassemble: bool,
+}
 
-    // interpret(&[9, 32768, 32769, 4, 19, 32768]);
-    interpret(&code);
+fn main() {
+    let args = Args::parse();
+
+    let code = parse("challenge.bin");
+    if args.disassemble {
+        static_disassembler::print_disassembly(&code);
+    } else {
+        // interpret(&[9, 32768, 32769, 4, 19, 32768]);
+        interpret(&code);
+    }
 }
 
 // Very ugly, but could not manage to read it directly into the vec with this method?

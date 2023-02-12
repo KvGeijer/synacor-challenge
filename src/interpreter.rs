@@ -1,8 +1,8 @@
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 
 const MEMSIZE: usize = 32768;
 const REGS: usize = 8;
-const MAXINT: u16 = 32768;
+const INTWRAP: u16 = 32768;
 
 struct State {
     memory: [u16; MEMSIZE],
@@ -21,16 +21,30 @@ impl State {
         }
     }
 
-    fn execute(&mut self, code: &[u16]) -> bool {
-        let opcode = &code[self.pc];
-        let operands = &code[self.pc + 1..]; // problem if last one has no operands?
-                                             // println!("Executing {opcode}");
+    fn execute(&mut self, trace: &mut bool) -> bool {
+        let opcode = &self.memory[self.pc];
+        let operands = &self.memory[self.pc + 1..]; // problem if last one has no operands?
+
+        if *trace {
+            println!(
+                "Executing {}, regs: {:?} stack top: {:?}",
+                self.pc,
+                self.registers,
+                self.stack.last()
+            );
+        }
+        if self.pc == 5491 {
+            println!("Completed");
+        }
         match opcode {
             0 => {
                 println!("\nHalting!");
                 return false;
             }
             1 => {
+                if operands[0] < 9 {
+                    panic!("Too small register set! {}", operands[0]);
+                }
                 self.set(operands[0], self.read(operands[1]));
                 self.pc += 3;
             }
@@ -71,14 +85,87 @@ impl State {
                 }
             }
             9 => {
-                let sum = (self.read(operands[1]) + self.read(operands[2])) % MAXINT;
-                self.set(operands[0], sum);
+                let sum = (self.read(operands[1]) as u32 + self.read(operands[2]) as u32)
+                    % INTWRAP as u32;
+                self.set(operands[0], sum as u16);
                 self.pc += 4;
             }
+            10 => {
+                let prod = (self.read(operands[1]) as u32 * self.read(operands[2]) as u32)
+                    % INTWRAP as u32;
+                self.set(operands[0], prod as u16);
+                self.pc += 4;
+            }
+            11 => {
+                let mask = self.read(operands[1]) % self.read(operands[2]);
+                self.set(operands[0], mask);
+                self.pc += 4;
+            }
+            12 => {
+                let mask = self.read(operands[1]) & self.read(operands[2]);
+                self.set(operands[0], mask);
+                self.pc += 4;
+            }
+            13 => {
+                let mask = self.read(operands[1]) | self.read(operands[2]);
+                self.set(operands[0], mask);
+                self.pc += 4;
+            }
+            14 => {
+                let mask = (INTWRAP - 1) & !self.read(operands[1]);
+                self.set(operands[0], mask);
+                self.pc += 3;
+            }
+            15 => {
+                let read = self.read_mem(self.read(operands[1]));
+                self.set(operands[0], read);
+                self.pc += 3;
+            }
+            16 => {
+                let read = self.read(operands[1]);
+                self.set(self.read(operands[0]), read);
+                self.pc += 3;
+            }
+            17 => {
+                if self.read(operands[0]) == 6027 {
+                    println!("Skipping");
+                    self.pc = 5564;
+                } else {
+                    self.stack.push(self.pc as u16 + 2);
+                    self.pc = self.read(operands[0]) as usize;
+                }
+            }
+            18 => {
+                if let Some(addr) = self.stack.pop() {
+                    self.pc = addr as usize;
+                } else {
+                    println!("Halting due to returning on empty stack");
+                    return false;
+                }
+            }
             19 => {
+                //*trace = *trace; //&& operands[0] == 10;
                 print!("{}", self.read(operands[0]) as u8 as char);
                 io::stdout().flush().unwrap();
                 self.pc += 2;
+            }
+            20 => {
+                let ascii = io::stdin().bytes().next().unwrap().unwrap();
+                if ascii == b'$' {
+                    self.set(INTWRAP + 7, INTWRAP - 1);
+                    println!("Now {}", self.registers[7]);
+                    io::stdin().bytes().next().unwrap().unwrap();
+                } else if ascii == b'?' {
+                    io::stdin().bytes().next().unwrap().unwrap();
+                    *trace = !*trace;
+                    println!("At {}, with regs: {:?}", self.pc, self.registers);
+                } else {
+                    // Just for debugging
+                    print!("{}", ascii as char);
+                    io::stdout().flush().unwrap();
+                    self.set(operands[0], ascii as u16);
+                    self.pc += 2;
+                }
             }
             21 => {
                 self.pc += 1;
@@ -96,9 +183,22 @@ impl State {
         if is_literal(location) {
             location
         } else if is_reg(location) {
+            if location == INTWRAP + 7 {
+                println!("reading 8th reg");
+            }
             self.registers[to_reg(location)]
         } else {
             panic!("Cannot parse {location}")
+        }
+    }
+
+    fn read_mem(&self, location: u16) -> u16 {
+        if is_literal(location) {
+            self.memory[location as usize]
+        // } else if is_reg(location) {
+        //     self.registers[to_reg(location)]
+        } else {
+            panic!("Cannot read from {location}")
         }
     }
 
@@ -115,18 +215,22 @@ impl State {
 
 pub fn interpret(code: &[u16]) {
     let mut state = State::new();
+    for (i, num) in code.iter().enumerate() {
+        state.memory[i] = *num;
+    }
 
-    while state.execute(code) {}
+    let mut trace = false;
+    while state.execute(&mut trace) {}
 }
 
 fn to_reg(literal: u16) -> usize {
-    literal as usize - 32768
+    literal as usize - MEMSIZE
 }
 
 fn is_literal(literal: u16) -> bool {
-    literal < MAXINT
+    literal < INTWRAP
 }
 
 fn is_reg(literal: u16) -> bool {
-    MAXINT <= literal && literal < MAXINT + 8
+    INTWRAP <= literal && literal < INTWRAP + 8
 }
