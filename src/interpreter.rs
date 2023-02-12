@@ -128,8 +128,11 @@ impl State {
             }
             17 => {
                 if self.read(operands[0]) == 6027 {
-                    println!("Skipping");
-                    self.pc = 5564;
+                    println!("Skipping: {:?}", self.registers);
+                    // self.pc = 5564;
+                    // self.pc = 5514;
+                    self.pc += 2;
+                    self.registers[0] = 7
                 } else {
                     self.stack.push(self.pc as u16 + 2);
                     self.pc = self.read(operands[0]) as usize;
@@ -152,7 +155,7 @@ impl State {
             20 => {
                 let ascii = io::stdin().bytes().next().unwrap().unwrap();
                 if ascii == b'$' {
-                    self.set(INTWRAP + 7, INTWRAP - 1);
+                    self.set(INTWRAP + 7, 5);
                     println!("Now {}", self.registers[7]);
                     io::stdin().bytes().next().unwrap().unwrap();
                 } else if ascii == b'?' {
@@ -184,7 +187,7 @@ impl State {
             location
         } else if is_reg(location) {
             if location == INTWRAP + 7 {
-                println!("reading 8th reg");
+                println!("reading 8th reg, {:?}", self.pc);
             }
             self.registers[to_reg(location)]
         } else {

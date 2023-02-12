@@ -273,6 +273,7 @@ def call2125(regs, stack):
 	
 # Takes forever to execute
 def call6027(regs, stack):
+	# Return value of regs[1] is discarded
 	# Seems to start at pc 5489 -> 6027, regs: [4, 1, 3, 10, 101, 0, 0, ?]
 	if regs[0] != 0:
 		# Jump to 6035
@@ -280,7 +281,7 @@ def call6027(regs, stack):
 			# Jump to 6048
 			stack.append(regs[0]) # Should we go back to where it was called from?
 			regs[1] = regs[1] - 1
-			call6027()
+			call6027(regs, stack)
 			regs[1] = regs[0]
 			regs[0] = stack.pop()
 			regs[0] = regs[0] - 1
@@ -294,16 +295,6 @@ def call6027(regs, stack):
 	else:
 		regs[0] = (regs[1] + 1) % INTWRAP # Become 0 here?
 		return
-	
-def call6027opt(regs, stack):
-	while regs[0] != 0:
-		if regs[1] != 0:
-			stack.append(regs[0])
-			regs[1] = regs[1] - 1
-		else:
-			regs[0] = regs[0] - 1
-			regs[1] = regs[7]
-	regs[0] = (regs[1] + 1) % INTWRAP
 
 def call1458(regs, stack, memory):
 	stack.append(regs[0])
@@ -321,13 +312,9 @@ def call1458(regs, stack, memory):
 	regs[5] = regs[1]
 	regs[4] = memory[regs[0]]	# How to optimize this?
 	regs[1] = 0
-	regs[3] = (regs[1] + 1) % INTWRAP
-	regs[0] = int(regs[3] > regs[4])
-	if regs[0] != 0:
-		# Jump 1507
-		ret()
-		return		
-	else:
+	regs[3] = 1
+	regs[0] = int(1 > regs[4])
+	if regs[0] == 0:
 		while True:
 			# 1480
 			regs[3] = (regs[3] + regs[6]) % INTWRAP
@@ -336,6 +323,8 @@ def call1458(regs, stack, memory):
 			regs[1] = (regs[1] + 1) % INTWRAP
 			if regs[1] == 0:
 				# Don't jump to 1480
-				ret()
-				return		
+				break
+	ret()
+	return		
+		
 	
