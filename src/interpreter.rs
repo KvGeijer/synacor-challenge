@@ -132,7 +132,7 @@ impl State {
                     // self.pc = 5564;
                     // self.pc = 5514;
                     self.pc += 2;
-                    self.registers[0] = 7
+                    self.registers[0] = 6
                 } else {
                     self.stack.push(self.pc as u16 + 2);
                     self.pc = self.read(operands[0]) as usize;
@@ -155,7 +155,7 @@ impl State {
             20 => {
                 let ascii = io::stdin().bytes().next().unwrap().unwrap();
                 if ascii == b'$' {
-                    self.set(INTWRAP + 7, 5);
+                    self.set(INTWRAP + 7, 25734);
                     println!("Now {}", self.registers[7]);
                     io::stdin().bytes().next().unwrap().unwrap();
                 } else if ascii == b'?' {
