@@ -156,7 +156,7 @@ impl State {
                 let ascii = io::stdin().bytes().next().unwrap().unwrap();
                 if ascii == b'$' {
                     self.set(INTWRAP + 7, 25734);
-                    println!("Now {}", self.registers[7]);
+                    println!("Now {:?}", self.registers);
                     io::stdin().bytes().next().unwrap().unwrap();
                 } else if ascii == b'?' {
                     io::stdin().bytes().next().unwrap().unwrap();
